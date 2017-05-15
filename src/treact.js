@@ -19,10 +19,14 @@ class CompositeComponent {
   	return this.renderedComponent.getHostNode();
   }
 
+  setState() {
+    //setState updater
+  }
+
 	mount() {
 		var element = this.currentElement;
 		var type = element.type;
-		var props = element.props;
+		var props = element.props || {};
 		
 		var renderedElement;
 		if (isClass(type)) {
@@ -109,37 +113,43 @@ class DOMComponent {
 	mount () {
 		var element = this.currentElement;
 		var type = element.type;
-		var props = element.props;
+		var props = element.props || {};
 		var children = props.children || [];
 
 		if (!Array.isArray(children)) {
 		    children = [children];
 	   }
-
-	   var node = document.createElement(type);
-	   this.node = node;
-
-	   // Set the attributes
-	   Object.keys(props).forEach(propName => {
-	     if (propName !== 'children') {
-	       node.setAttribute(propName, props[propName]);
-	     }
-	   });
-     
-     children.filter(Boolean);
-     var renderedChildren = children.map(instantiateComponent);
-     this.renderedChildren = renderedChildren;
-
-     var childNodes = renderedChildren.map(child => child.mount());
-     childNodes.map((childNode) => node.appendChild(childNode));
+     console.log('children children', children);
+     let node;
+     console.log('element element', element, typeof element);
+     if (['string', 'number'].includes(typeof element)) {
+       node = document.createTextNode(element);
+     } else {
+       node = document.createElement(type);
+  	   // Set the attributes
+  	   Object.keys(props).forEach(propName => {
+  	     if (propName !== 'children') {
+  	       node.setAttribute(propName, props[propName]);
+  	     }
+  	   });
+       
+       children.filter(Boolean);
+       var renderedChildren = children.map(instantiateComponent);
+       this.renderedChildren = renderedChildren;
+       console.log('element', element);
+       console.log('renderedChildren', renderedChildren);
+       var childNodes = renderedChildren.map(child => child.mount());
+       childNodes.map((childNode) => node.appendChild(childNode));
+     }
+     this.node = node;
      return node;
 	}
 
   receive(nextElement) {
   	var node = this.node;
   	var prevElement = this.currentElement;
-  	var prevProps = prevElement.props;
-  	var nextProps = nextElement.props;
+  	var prevProps = prevElement.props || {};
+  	var nextProps = nextElement.props || {};
   	this.currentElement = nextElement;
     
     Object.keys(prevProps).forEach(propName => {
@@ -252,7 +262,7 @@ function instantiateComponent(element) {
 	var type = element.type;
   if (typeof type === 'function') {
     return new CompositeComponent(element);
-  } else if (typeof type === 'string') {
+  } else {
     return new DOMComponent(element);
   }
 }
@@ -293,9 +303,11 @@ class App {
 	}
 	componentWillMount() {
 		console.log("componentWillMount");
+    this.setState({p: 0.2});
 	}
 	render () {
-		return {type: 'div', props: {children: {type: 'span', props: {}}}}
+    console.log('this.state.p', this.state.p);
+		return {type: 'div', props: {children: {type: 'span', props: {children: 'treact'}}}}
 	}
 }
 var rootEl = document.getElementById('app');
