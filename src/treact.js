@@ -19,31 +19,32 @@ class CompositeComponent {
   	return this.renderedComponent.getHostNode();
   }
 
-  setState() {
-    //setState updater
-  }
-
 	mount() {
 		var element = this.currentElement;
 		var type = element.type;
 		var props = element.props || {};
 		
-		var renderedElement;
+		let renderedElement;
 		if (isClass(type)) {
 		  var publicInstance = new type();
+      
 		  if (publicInstance.componentWillMount) {
 		    publicInstance.componentWillMount();
 		  }
-		  var renderedElement = publicInstance.render();
+		  renderedElement = publicInstance.render();
 		} else if (typeof type === 'function') {
 			renderedElement = type(props);
 		}
-
 		this.publicInstance = publicInstance;
 
-		var renderedComponent = instantiateComponent(renderedElement); 
+		var renderedComponent = instantiateComponent(renderedElement);
+     
 		this.renderedComponent = renderedComponent;
-
+    Object.defineProperties(publicInstance, {
+      '_reactInternalInstance': {
+        value: this
+      }
+    });
 		return renderedComponent.mount();
 	}
 
@@ -119,9 +120,7 @@ class DOMComponent {
 		if (!Array.isArray(children)) {
 		    children = [children];
 	   }
-     console.log('children children', children);
      let node;
-     console.log('element element', element, typeof element);
      if (['string', 'number'].includes(typeof element)) {
        node = document.createTextNode(element);
      } else {
@@ -136,8 +135,6 @@ class DOMComponent {
        children.filter(Boolean);
        var renderedChildren = children.map(instantiateComponent);
        this.renderedChildren = renderedChildren;
-       console.log('element', element);
-       console.log('renderedChildren', renderedChildren);
        var childNodes = renderedChildren.map(child => child.mount());
        childNodes.map((childNode) => node.appendChild(childNode));
      }
@@ -296,20 +293,42 @@ function mountTree(element, containerNode) {
 	 return publicInstance;
 }
 
+class Component {
+  constructor(props) {
+    this.props = props;
+  }
+  isReactElement() {
+    return true;
+  }
+  setState(nextState) {
+    const reactComponent = this._reactInternalInstance;
+    this.state = Object.assign({}, this.state, nextState);
+    if (reactComponent) {
+      reactComponent.renderedComponent.receive(this.render())
+    }
+  }
+}
 
-class App {
-	isReactElement() {
-		return true;
-	}
+class App extends Component {
+  constructor(props) {
+    super(props);
+  }
 	componentWillMount() {
-		console.log("componentWillMount");
-    this.setState({p: 0.2});
+    this.setState({version: 0.1});
 	}
 	render () {
-    console.log('this.state.p', this.state.p);
-		return {type: 'div', props: {children: {type: 'span', props: {children: 'treact'}}}}
+    const { version = 0 } = this.state;
+		return {type: 'div', props: { children: {type: 'span', props: {children: `treact-${version}`}}}}
 	}
 }
+
+/*window.React = {
+  Component: Component
+}
+window.ReactDOM = {
+  render: mountTree
+}*/
+
 var rootEl = document.getElementById('app');
 mountTree({type: App}, rootEl);
 
